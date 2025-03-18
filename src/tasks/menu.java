@@ -1,13 +1,19 @@
 package tasks;
 
+import java.io.*;
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 import java.awt.event.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class menu extends contacts
 {
+    private static final String FILE_NAME = "products.dat";
+
     static
     {
         new menu();
@@ -30,6 +36,10 @@ public class menu extends contacts
     {
         _table_model = new DefaultTableModel(new Object[]{"ID", "Имя", "Поставщик"}, 0);
         _table = new JTable(_table_model);
+
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(_table_model);
+        _table.setRowSorter(sorter);
+
         _frame.add(new JScrollPane(_table), BorderLayout.CENTER);
     }
 
@@ -38,11 +48,22 @@ public class menu extends contacts
         JButton button_add = new JButton("Добавить продукт");
         JButton button_print = new JButton("Печать");
 
+        JButton button_load_from_file = new JButton("Загрузить");
+        JButton button_read_from_file = new JButton("Сохранить");
+
         button_add.addActionListener(e -> open_add_product_dialog());
         button_print.addActionListener(e -> dump_products());
 
-        _frame.add(button_add, BorderLayout.SOUTH);
-        _frame.add(button_print, BorderLayout.SOUTH);
+        button_load_from_file.addActionListener(e -> load_from_file());
+        button_read_from_file.addActionListener(e -> read_from_file());
+
+        JPanel panel = new JPanel();
+        panel.add(button_add);
+        panel.add(button_print);
+        panel.add(button_load_from_file);
+        panel.add(button_read_from_file);
+
+        _frame.add(panel, BorderLayout.SOUTH);
     }
 
     private void dump_products()
@@ -54,6 +75,41 @@ public class menu extends contacts
             String name = (String) _table_model.getValueAt(i, 1);
             String supplier = (String) _table_model.getValueAt(i, 2);
             System.out.printf("ID: %d, Имя: %s, Поставщик: %s%n", id, name, supplier);
+        }
+    }
+
+    public void read_from_file()
+    {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE_NAME)))
+        {
+            oos.writeObject(_super_market.get_products());
+            System.out.println("Products saved successfully.");
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public void load_from_file()
+    {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE_NAME)))
+        {
+            List<super_market.item> prd = (List<super_market.item>)ois.readObject();
+            _super_market.add_all(prd);
+
+            _table_model.setRowCount(0);
+
+            for (super_market.item product : prd)
+            {
+                _table_model.addRow(new Object[]{product.get_code(), product.get_name(), product.get_vendor()});
+            }
+
+            System.out.println("Products loaded successfully.");
+        }
+        catch (IOException | ClassNotFoundException e)
+        {
+            e.printStackTrace();
         }
     }
 
